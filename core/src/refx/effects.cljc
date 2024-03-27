@@ -44,11 +44,16 @@
    :after (fn do-fx-after
             [context]
             (let [effects            (:effects context)
-                  effects-without-db (dissoc effects :db)
-                  db-effect          (registry/lookup kind :db)]
-              ;; :db effect is guaranteed to be handled before all other effects.
+                  effects-without-db (dissoc effects :db :ds-tx)
+                  db-effect          (registry/lookup kind :db)
+                  ds-effect          (registry/lookup kind :ds-tx)]
+
+              ;; :db & :ds-tx effects are guaranteed to be handled before all other effects.
               (when-let [new-db (:db effects)]
                 (db-effect new-db))
+              (when-let [tx (:ds-tx effects)]
+                (ds-effect tx))
+
               (doseq [[fx-id effect-value] effects-without-db]
                 (if-let [effect-fn (registry/lookup kind fx-id false)]
                   (effect-fn effect-value)
